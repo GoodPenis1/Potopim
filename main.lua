@@ -392,40 +392,174 @@ local function cloneSwapTP(targetCF)
     clone:Destroy()
 end
 
--- Method 10: Vehicle/Seat bypass (через сідання)
-local function seatTP(targetCF)
+-- Method 11: Disable AntiCheat Scripts (знаходимо і вимикаємо)
+local function disableAC()
+    -- Шукаємо античіт в різних місцях
+    local acFound = false
+    
+    -- Перевіряємо ReplicatedStorage
+    for _, obj in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+        if obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript") then
+            local name = obj.Name:lower()
+            if name:find("anti") or name:find("cheat") or name:find("kick") or name:find("ban") or name:find("detect") then
+                obj.Disabled = true
+                obj:Destroy()
+                acFound = true
+                print("Знайшов і вимкнув:", obj.Name)
+            end
+        end
+    end
+    
+    -- Перевіряємо StarterPlayer
+    for _, obj in pairs(game:GetService("StarterPlayer"):GetDescendants()) do
+        if obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript") then
+            local name = obj.Name:lower()
+            if name:find("anti") or name:find("cheat") or name:find("kick") or name:find("ban") or name:find("detect") then
+                obj.Disabled = true
+                obj:Destroy()
+                acFound = true
+                print("Знайшов і вимкнув:", obj.Name)
+            end
+        end
+    end
+    
+    -- Перевіряємо персонажа
+    local char = player.Character
+    if char then
+        for _, obj in pairs(char:GetDescendants()) do
+            if obj:IsA("Script") or obj:IsA("LocalScript") then
+                local name = obj.Name:lower()
+                if name:find("anti") or name:find("cheat") or name:find("kick") or name:find("ban") or name:find("detect") then
+                    obj.Disabled = true
+                    obj:Destroy()
+                    acFound = true
+                    print("Знайшов і вимкнув:", obj.Name)
+                end
+            end
+        end
+    end
+    
+    return acFound
+end
+
+-- Method 12: Hook RemoteEvents (блокуємо сигнали античіту)
+local blockedRemotes = {}
+local function blockACRemotes()
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        
+        -- Блокуємо підозрілі RemoteEvent виклики
+        if method == "FireServer" or method == "InvokeServer" then
+            local remoteName = self.Name:lower()
+            
+            if remoteName:find("kick") or remoteName:find("ban") or 
+               remoteName:find("anticheat") or remoteName:find("detect") or
+               remoteName:find("flag") or remoteName:find("report") then
+                
+                print("Заблокував RemoteEvent:", self.Name)
+                return
+            end
+        end
+        
+        return oldNamecall(self, ...)
+    end)
+end
+
+-- Method 13: Bypass через Workspace Camera manipulation
+local function cameraTP(targetCF)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
     local hrp = char.HumanoidRootPart
+    local camera = workspace.CurrentCamera
     
-    -- Створюємо невидиме сидіння
-    local seat = Instance.new("Seat")
-    seat.Size = Vector3.new(1, 0.5, 1)
-    seat.Position = hrp.Position
-    seat.Anchored = true
-    seat.Transparency = 1
-    seat.CanCollide = false
-    seat.Parent = workspace
+    -- Зберігаємо камеру
+    local oldCamType = camera.CameraType
+    camera.CameraType = Enum.CameraType.Scriptable
     
-    -- Садимось
-    seat:Sit(char.Humanoid)
+    -- Рухаємо камеру до цілі першою
+    camera.CFrame = targetCF
     
     task.wait(0.1)
     
-    -- Рухаємо сидіння до цілі
-    local distance = (targetCF.Position - seat.Position).Magnitude
-    local steps = math.ceil(distance / 10)
+    -- Потім телепортуємо персонажа
+    hrp.CFrame = targetCF
     
-    for i = 1, steps do
-        seat.CFrame = seat.CFrame:Lerp(targetCF, i/steps)
-        task.wait(0.05)
+    task.wait(0.2)
+    
+    -- Повертаємо камеру
+    camera.CameraType = oldCamType
+end
+
+-- Method 14: Exploit через Humanoid.Died bypass
+local function deathBypassTP(targetCF)
+    local char = player.Character
+    if not char then return end
+    
+    local humanoid = char:FindFirstChild("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    
+    if not humanoid or not hrp then return end
+    
+    -- Робимо персонажа "нестворимим"
+    local oldHealth = humanoid.Health
+    local oldMaxHealth = humanoid.MaxHealth
+    
+    humanoid.MaxHealth = math.huge
+    humanoid.Health = math.huge
+    
+    -- Вимикаємо всі Humanoid події
+    for _, conn in pairs(getconnections(humanoid.Died)) do
+        conn:Disable()
     end
     
-    -- Встаємо і видаляємо сидіння
-    char.Humanoid.Sit = false
-    task.wait(0.2)
-    seat:Destroy()
+    task.wait(0.1)
+    
+    -- Телепортуємось
+    hrp.CFrame = targetCF
+    
+    task.wait(0.3)
+    
+    -- Відновлюємо здоров'я
+    humanoid.MaxHealth = oldMaxHealth
+    humanoid.Health = oldHealth
+    
+    -- Вмикаємо події назад
+    for _, conn in pairs(getconnections(humanoid.Died)) do
+        conn:Enable()
+    end
+end
+
+-- Method 15: Spoof Position через metamethods
+local spoofActive = false
+local spoofTarget = nil
+
+local function spoofPosition(targetCF)
+    spoofActive = true
+    spoofTarget = targetCF.Position
+    
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    -- Підміняємо Position при зчитуванні
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", function(self, key)
+        if spoofActive and self == char.HumanoidRootPart and key == "Position" then
+            return spoofTarget
+        end
+        return oldIndex(self, key)
+    end)
+    
+    task.wait(0.5)
+    
+    -- Реально телепортуємось
+    char.HumanoidRootPart.CFrame = targetCF
+    
+    task.wait(1)
+    
+    spoofActive = false
 end
 
 -- 🟥 STEALER GUI
