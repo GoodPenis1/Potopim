@@ -172,12 +172,16 @@ local function walkToTP(targetCF)
     humanoid.WalkSpeed = oldSpeed
 end
 
--- Method 3: Anchor method (тимчасово "заморожуємо" персонажа)
+-- Method 3: Improved Anchor method (тимчасово "заморожуємо" персонажа)
 local function anchorTP(targetCF)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
     local hrp = char.HumanoidRootPart
+    local humanoid = char:FindFirstChild("Humanoid")
+    
+    -- ВАЖЛИВО: Зберігаємо оригінальне здоров'я
+    local originalHealth = humanoid and humanoid.Health or 100
     
     -- Заморожуємо всі частини тіла
     for _, part in pairs(char:GetDescendants()) do
@@ -186,23 +190,47 @@ local function anchorTP(targetCF)
         end
     end
     
-    wait(0.05)
-    
-    -- Повільний рух HRP
-    local steps = 20
-    local start = hrp.CFrame
-    for i = 1, steps do
-        hrp.CFrame = start:Lerp(targetCF, i/steps)
-        wait(0.03)
+    -- Вимикаємо колізії на час TP
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
     end
     
-    wait(0.05)
+    wait(0.1)
     
-    -- Розморожуємо
+    -- НАБАГАТО повільніший рух HRP (більше кроків)
+    local distance = (targetCF.Position - hrp.Position).Magnitude
+    local steps = math.max(100, math.ceil(distance / 1)) -- Мінімум 100 кроків
+    local start = hrp.CFrame
+    
+    for i = 1, steps do
+        if not char or not hrp then break end
+        
+        -- Захист здоров'я під час TP
+        if humanoid and humanoid.Health < originalHealth then
+            humanoid.Health = originalHealth
+        end
+        
+        hrp.CFrame = start:Lerp(targetCF, i/steps)
+        
+        -- Випадкова затримка для "природності"
+        wait(0.01 + math.random() * 0.02)
+    end
+    
+    wait(0.15)
+    
+    -- Розморожуємо та відновлюємо колізії
     for _, part in pairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
             part.Anchored = false
+            part.CanCollide = true
         end
+    end
+    
+    -- Фінальне відновлення здоров'я
+    if humanoid then
+        humanoid.Health = originalHealth
     end
 end
 
