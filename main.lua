@@ -1,6 +1,7 @@
--- Simple Cheat GUI with Tabs + TP
+-- Simple Cheat GUI with Tabs + Advanced TP
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 -- GUI
 local gui = Instance.new("ScreenGui", player.PlayerGui)
@@ -89,24 +90,169 @@ local function createActionButton(parent,text,y)
     return b
 end
 
--- 🟥 STEALER FUNCTIONS
+-- 🟥 ADVANCED TP FUNCTIONS
+local savedCFrame = nil
+local isTping = false
+
+-- Method 1: Smooth Lerp TP (найбезпечніший)
+local function smoothTP(targetCF, speed)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    isTping = true
+    
+    local startCF = hrp.CFrame
+    local distance = (targetCF.Position - startCF.Position).Magnitude
+    local steps = math.ceil(distance / (speed or 5))
+    
+    for i = 0, steps do
+        if not isTping then break end
+        local alpha = i / steps
+        hrp.CFrame = startCF:Lerp(targetCF, alpha)
+        RunService.Heartbeat:Wait()
+    end
+    
+    isTping = false
+end
+
+-- Method 2: Velocity-based TP (імітація руху)
+local function velocityTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    local humanoid = char:FindFirstChild("Humanoid")
+    
+    -- Вимикаємо фізику на мить
+    local oldColl = hrp.CanCollide
+    hrp.CanCollide = false
+    
+    if humanoid then
+        humanoid.PlatformStand = true
+    end
+    
+    -- Створюємо BodyVelocity для "природного" руху
+    local bv = Instance.new("BodyVelocity", hrp)
+    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    
+    local direction = (targetCF.Position - hrp.Position).Unit
+    local distance = (targetCF.Position - hrp.Position).Magnitude
+    
+    -- Розраховуємо швидкість
+    bv.Velocity = direction * math.min(distance * 2, 100)
+    
+    wait(0.1)
+    
+    -- Фінальне позиціонування
+    hrp.CFrame = targetCF
+    
+    -- Відновлюємо фізику
+    bv:Destroy()
+    hrp.CanCollide = oldColl
+    
+    if humanoid then
+        humanoid.PlatformStand = false
+    end
+end
+
+-- Method 3: Tween-based TP (через TweenService)
+local function tweenTP(targetCF, duration)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local TweenService = game:GetService("TweenService")
+    local hrp = char.HumanoidRootPart
+    
+    local tweenInfo = TweenInfo.new(
+        duration or 0.5,
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.InOut
+    )
+    
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCF})
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+-- Method 4: Bypass через Network Ownership (експериментальний)
+local function bypassTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    
+    -- Спроба обійти через зміну Network Owner
+    pcall(function()
+        hrp:SetNetworkOwner(nil)
+    end)
+    
+    -- Вимикаємо collision
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+    
+    -- Instant TP
+    hrp.CFrame = targetCF
+    
+    wait(0.1)
+    
+    -- Відновлюємо collision
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = true
+        end
+    end
+end
+
+-- 🟥 STEALER GUI BUTTONS
 local savedCFrame = nil
 
-local saveBtn = createActionButton(stealerPage,"Save TP Position",0.25)
+local saveBtn = createActionButton(stealerPage,"Save TP Position",0.05)
 saveBtn.MouseButton1Click:Connect(function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         savedCFrame = char.HumanoidRootPart.CFrame
         saveBtn.Text = "Position Saved ✔"
+        wait(1)
+        saveBtn.Text = "Save TP Position"
     end
 end)
 
-local tpBtn = createActionButton(stealerPage,"TP Position",0.45)
-tpBtn.MouseButton1Click:Connect(function()
-    local char = player.Character
-    if savedCFrame and char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = savedCFrame
+local tpSmooth = createActionButton(stealerPage,"TP (Smooth)",0.20)
+tpSmooth.MouseButton1Click:Connect(function()
+    if savedCFrame then
+        smoothTP(savedCFrame, 8)
     end
+end)
+
+local tpVelocity = createActionButton(stealerPage,"TP (Velocity)",0.35)
+tpVelocity.MouseButton1Click:Connect(function()
+    if savedCFrame then
+        velocityTP(savedCFrame)
+    end
+end)
+
+local tpTween = createActionButton(stealerPage,"TP (Tween)",0.50)
+tpTween.MouseButton1Click:Connect(function()
+    if savedCFrame then
+        tweenTP(savedCFrame, 0.3)
+    end
+end)
+
+local tpBypass = createActionButton(stealerPage,"TP (Force)",0.65)
+tpBypass.MouseButton1Click:Connect(function()
+    if savedCFrame then
+        bypassTP(savedCFrame)
+    end
+end)
+
+local stopBtn = createActionButton(stealerPage,"Stop TP",0.80)
+stopBtn.BackgroundColor3 = Color3.fromRGB(120,30,30)
+stopBtn.MouseButton1Click:Connect(function()
+    isTping = false
 end)
 
 -- Visual placeholder
