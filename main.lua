@@ -107,176 +107,306 @@ end
 -- 🟥 PING & NETWORK BYPASS METHODS
 local savedCFrame = nil
 
--- Method 1: Lag Switch TP (імітує високий пінг)
-local function lagSwitchTP(targetCF)
+-- Method 1: Flying Platform TP (невидима платформа)
+local platformActive = false
+local platform = nil
+
+local function flyingPlatformTP(targetCF)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
     local hrp = char.HumanoidRootPart
     
-    -- "Заморожуємо" з'єднання
-    settings().Network.IncomingReplicationLag = 1000
+    -- Створюємо невидиму платформу
+    platform = Instance.new("Part")
+    platform.Size = Vector3.new(6, 1, 6)
+    platform.Position = hrp.Position + Vector3.new(0, -3, 0)
+    platform.Anchored = true
+    platform.Transparency = 1
+    platform.CanCollide = true
+    platform.Name = "FlyPlatform"
+    platform.Parent = workspace
+    
+    platformActive = true
+    
+    -- Піднімаємо вгору (50 studs)
+    local startHeight = platform.Position.Y
+    local targetHeight = startHeight + 50
+    
+    for i = 1, 25 do
+        if not platformActive then break end
+        local newY = startHeight + (50 * (i/25))
+        platform.Position = Vector3.new(platform.Position.X, newY, platform.Position.Z)
+        hrp.CFrame = CFrame.new(platform.Position + Vector3.new(0, 4, 0))
+        task.wait(0.05)
+    end
+    
+    task.wait(0.2)
+    
+    -- Летимо до цілі
+    local startPos = platform.Position
+    local targetPos = Vector3.new(targetCF.Position.X, targetHeight, targetCF.Position.Z)
+    
+    local distance = (targetPos - startPos).Magnitude
+    local steps = math.ceil(distance / 5)
+    
+    for i = 1, steps do
+        if not platformActive then break end
+        platform.Position = startPos:Lerp(targetPos, i/steps)
+        hrp.CFrame = CFrame.new(platform.Position + Vector3.new(0, 4, 0))
+        task.wait(0.05)
+    end
+    
+    task.wait(0.2)
+    
+    -- Опускаємось вниз
+    for i = 1, 25 do
+        if not platformActive then break end
+        local newY = targetHeight - (50 * (i/25))
+        platform.Position = Vector3.new(platform.Position.X, newY, platform.Position.Z)
+        hrp.CFrame = CFrame.new(platform.Position + Vector3.new(0, 4, 0))
+        task.wait(0.05)
+    end
+    
+    -- Фінальне позиціонування
+    hrp.CFrame = targetCF
+    
+    task.wait(2.5)
+    
+    -- Видаляємо платформу
+    if platform then
+        platform:Destroy()
+        platform = nil
+    end
+    platformActive = false
+end
+
+-- Method 2: Lag Save & Invisible Walk (залагав на місці)
+local lagSaveActive = false
+local lagClone = nil
+local lagSavedPos = nil
+local invisConnection = nil
+
+local function startLagSave()
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    lagSaveActive = true
+    lagSavedPos = char.HumanoidRootPart.CFrame
+    
+    -- Створюємо клон який "залагав"
+    lagClone = char:Clone()
+    
+    -- Робимо клон напівпрозорим
+    for _, part in pairs(lagClone:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 0.5
+            part.CanCollide = false
+        elseif part:IsA("Decal") or part:IsA("Texture") then
+            part.Transparency = 0.5
+        end
+    end
+    
+    -- Видаляємо скрипти з клона
+    for _, obj in pairs(lagClone:GetDescendants()) do
+        if obj:IsA("Script") or obj:IsA("LocalScript") then
+            obj:Destroy()
+        end
+    end
+    
+    lagClone.Parent = workspace
+    
+    if lagClone:FindFirstChild("HumanoidRootPart") then
+        lagClone.HumanoidRootPart.CFrame = lagSavedPos
+        lagClone.HumanoidRootPart.Anchored = true
+    end
+    
+    -- Робимо реального персонажа невидимим
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 1
+        elseif part:IsA("Decal") or part:IsA("Texture") then
+            part.Transparency = 1
+        end
+    end
+    
+    -- Тримаємо клон на місці
+    task.spawn(function()
+        while lagSaveActive and lagClone do
+            if lagClone:FindFirstChild("HumanoidRootPart") then
+                lagClone.HumanoidRootPart.CFrame = lagSavedPos
+            end
+            task.wait(0.1)
+        end
+    end)
+    
+    print("Lag Save активовано! Ходи крадь предмет.")
+end
+
+local function executeLagTP(targetCF)
+    if not lagSaveActive then return end
+    
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    -- "Розлагуємо" - телепортуємо реального персонажа
+    char.HumanoidRootPart.CFrame = targetCF or lagSavedPos
+    
+    task.wait(0.2)
+    
+    -- Робимо персонажа видимим
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 0
+        elseif part:IsA("Decal") or part:IsA("Texture") then
+            part.Transparency = 0
+        end
+    end
+    
+    -- Видаляємо клон
+    if lagClone then
+        lagClone:Destroy()
+        lagClone = nil
+    end
+    
+    lagSaveActive = false
+    
+    task.wait(2.5)
+    
+    print("Lag TP виконано!")
+end
+
+-- Method 3: Stealth Dash (швидкий dash невидимістю)
+local function stealthDash(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    
+    -- Робимо невидимим
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 1
+            part.CanCollide = false
+        end
+    end
+    
+    -- Дуже швидкий dash (0.3 секунди)
+    local startPos = hrp.Position
+    local endPos = targetCF.Position
+    
+    for i = 1, 15 do
+        local alpha = i / 15
+        hrp.CFrame = CFrame.new(startPos:Lerp(endPos, alpha))
+        task.wait(0.02)
+    end
+    
+    -- Чекаємо 2 секунди
+    task.wait(2)
+    
+    -- Робимо видимим
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 0
+            part.CanCollide = true
+        end
+    end
+end
+
+-- Method 4: Fake Death TP (вдаємо смерть)
+local function fakeDeathTP(targetCF)
+    local char = player.Character
+    if not char then return end
+    
+    local humanoid = char:FindFirstChild("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    
+    if not humanoid or not hrp then return end
+    
+    -- Робимо вигляд що помер
+    humanoid.Health = 0
     
     task.wait(0.5)
     
-    -- Телепортуємось під час "лагу"
+    -- Телепортуємо "мертве" тіло
     hrp.CFrame = targetCF
     
-    task.wait(2.5) -- Чекаємо щоб зарахувалось
+    task.wait(0.5)
     
-    -- Відновлюємо з'єднання
-    settings().Network.IncomingReplicationLag = 0
+    -- "Оживаємо"
+    humanoid.Health = humanoid.MaxHealth
+    
+    task.wait(2)
 end
 
--- Method 2: Heartbeat manipulation (обходимо через цикл рендерингу)
-local function heartbeatTP(targetCF)
+-- Method 5: Quantum Blink (телепорт маленькими "блінками")
+local function quantumBlink(targetCF)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
     local hrp = char.HumanoidRootPart
-    
-    -- Відключаємо фізику
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-            part.Massless = true
-        end
-    end
     
     local startPos = hrp.Position
     local endPos = targetCF.Position
     local distance = (endPos - startPos).Magnitude
     
-    -- Дуже швидкі маленькі кроки на кожен Heartbeat
-    local steps = 0
-    local maxSteps = 60 -- ~1 секунда
+    -- Блінки по 10 studs
+    local blinkSize = 10
+    local blinks = math.ceil(distance / blinkSize)
     
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
-        steps = steps + 1
-        
-        if steps >= maxSteps then
-            hrp.CFrame = targetCF
-            connection:Disconnect()
-            
-            -- Відновлюємо фізику
-            task.wait(2.5)
-            for _, part in pairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                    part.Massless = false
-                end
+    for i = 1, blinks do
+        -- Короткочасна невидимість під час блінку
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = 1
             end
-        else
-            local alpha = steps / maxSteps
-            hrp.CFrame = CFrame.new(startPos:Lerp(endPos, alpha))
         end
-    end)
-end
-
--- Method 3: Physics bypass (вимикаємо фізику повністю)
-local function physicsTP(targetCF)
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    
-    local hrp = char.HumanoidRootPart
-    
-    -- Зберігаємо властивості
-    local oldAssembly = hrp.AssemblyLinearVelocity
-    local oldCan = hrp.CanCollide
-    
-    -- Вимикаємо фізику
-    hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
-    hrp.CanCollide = false
-    hrp.Anchored = true
-    
-    task.wait(0.1)
-    
-    -- Миттєвий TP
-    hrp.CFrame = targetCF
-    hrp.Anchored = false
-    
-    task.wait(2.5)
-    
-    -- Відновлюємо
-    hrp.CanCollide = oldCan
-end
-
--- Method 4: CFrame lerp with yield (повільний але стабільний)
-local function yieldTP(targetCF)
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    
-    local hrp = char.HumanoidRootPart
-    
-    local start = hrp.CFrame
-    local steps = 30
-    
-    for i = 1, steps do
-        hrp.CFrame = start:Lerp(targetCF, i/steps)
-        task.wait(0.03) -- Загалом ~0.9 секунди
+        
+        task.wait(0.05)
+        
+        -- Блінк
+        local alpha = i / blinks
+        hrp.CFrame = CFrame.new(startPos:Lerp(endPos, alpha))
+        
+        -- З'являємось
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = 0
+            end
+        end
+        
+        task.wait(0.1)
     end
     
-    -- Доповнюємо до 2 секунд
-    task.wait(1.1)
+    hrp.CFrame = targetCF
+    task.wait(2.5)
 end
 
--- Method 5: Simulation radius exploit
-local function simRadiusTP(targetCF)
+-- Method 6: Velocity Push (штовхає через velocity)
+local function velocityPush(targetCF)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
     local hrp = char.HumanoidRootPart
     
-    -- Збільшуємо simulation radius
-    pcall(function()
-        player.MaximumSimulationRadius = math.huge
-        player.SimulationRadius = math.huge
-    end)
+    -- Створюємо BodyVelocity
+    local bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bv.Parent = hrp
     
-    task.wait(0.2)
+    local direction = (targetCF.Position - hrp.Position).Unit
+    local distance = (targetCF.Position - hrp.Position).Magnitude
     
-    -- Телепортуємось
+    -- Розраховуємо velocity для досягнення за ~1 секунду
+    bv.Velocity = direction * (distance * 1.5)
+    
+    task.wait(1)
+    
+    -- Видаляємо velocity і позиціонуємо точно
+    bv:Destroy()
     hrp.CFrame = targetCF
     
-    task.wait(2.5)
-    
-    -- Повертаємо назад
-    pcall(function()
-        player.MaximumSimulationRadius = 1000
-        player.SimulationRadius = 1000
-    end)
-end
-
--- Method 6: Network Owner bypass
-local function networkOwnerTP(targetCF)
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    
-    local hrp = char.HumanoidRootPart
-    
-    -- Забираємо Network Ownership у сервера
-    pcall(function()
-        hrp:SetNetworkOwner(player)
-    end)
-    
-    -- Вимикаємо всі bodymovers
-    for _, obj in pairs(char:GetDescendants()) do
-        if obj:IsA("BodyMover") then
-            obj:Destroy()
-        end
-    end
-    
-    task.wait(0.1)
-    
-    hrp.CFrame = targetCF
-    
-    task.wait(2.5)
-    
-    -- Повертаємо ownership серверу
-    pcall(function()
-        hrp:SetNetworkOwner(nil)
-    end)
+    task.wait(2)
 end
 
 -- 🟥 GODMODE METHODS
@@ -338,65 +468,69 @@ saveBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-createLabel(stealerPage, "Ping/Network Methods:", 0.13)
+createLabel(stealerPage, "Creative Methods:", 0.13)
 
-local tpLag = createActionButton(stealerPage,"🌐 Lag Switch TP",0.20)
-tpLag.MouseButton1Click:Connect(function()
+local tpPlatform = createActionButton(stealerPage,"🚁 Flying Platform",0.20)
+tpPlatform.MouseButton1Click:Connect(function()
     if savedCFrame then
-        tpLag.Text = "⏳ TPing..."
-        lagSwitchTP(savedCFrame)
-        tpLag.Text = "🌐 Lag Switch TP"
+        tpPlatform.Text = "✈️ Flying..."
+        flyingPlatformTP(savedCFrame)
+        tpPlatform.Text = "🚁 Flying Platform"
     end
 end)
 
-local tpHeart = createActionButton(stealerPage,"💓 Heartbeat TP",0.30)
-tpHeart.MouseButton1Click:Connect(function()
-    if savedCFrame then
-        tpHeart.Text = "⏳ TPing..."
-        heartbeatTP(savedCFrame)
-        tpHeart.Text = "💓 Heartbeat TP"
+local lagSaveBtn = createActionButton(stealerPage,"👻 Start Lag Save",0.30)
+lagSaveBtn.MouseButton1Click:Connect(function()
+    if lagSaveActive then
+        executeLagTP(savedCFrame)
+        lagSaveBtn.Text = "👻 Start Lag Save"
+        lagSaveBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    else
+        startLagSave()
+        lagSaveBtn.Text = "⚡ Execute Lag TP"
+        lagSaveBtn.BackgroundColor3 = Color3.fromRGB(100,100,30)
     end
 end)
 
-local tpPhysics = createActionButton(stealerPage,"⚛️ Physics Bypass",0.40)
-tpPhysics.MouseButton1Click:Connect(function()
+local tpDash = createActionButton(stealerPage,"⚡ Stealth Dash",0.40)
+tpDash.MouseButton1Click:Connect(function()
     if savedCFrame then
-        tpPhysics.Text = "⏳ TPing..."
-        physicsTP(savedCFrame)
-        tpPhysics.Text = "⚛️ Physics Bypass"
+        tpDash.Text = "💨 Dashing..."
+        stealthDash(savedCFrame)
+        tpDash.Text = "⚡ Stealth Dash"
     end
 end)
 
-createLabel(stealerPage, "Slower Methods:", 0.51)
+createLabel(stealerPage, "Other Methods:", 0.51)
 
-local tpYield = createActionButton(stealerPage,"🐢 Yield TP (safe)",0.58)
-tpYield.MouseButton1Click:Connect(function()
+local tpDeath = createActionButton(stealerPage,"💀 Fake Death",0.58)
+tpDeath.MouseButton1Click:Connect(function()
     if savedCFrame then
-        tpYield.Text = "⏳ TPing..."
-        yieldTP(savedCFrame)
-        tpYield.Text = "🐢 Yield TP (safe)"
+        tpDeath.Text = "☠️ Dying..."
+        fakeDeathTP(savedCFrame)
+        tpDeath.Text = "💀 Fake Death"
     end
 end)
 
-local tpSim = createActionButton(stealerPage,"📡 Sim Radius",0.68)
-tpSim.MouseButton1Click:Connect(function()
+local tpBlink = createActionButton(stealerPage,"✨ Quantum Blink",0.68)
+tpBlink.MouseButton1Click:Connect(function()
     if savedCFrame then
-        tpSim.Text = "⏳ TPing..."
-        simRadiusTP(savedCFrame)
-        tpSim.Text = "📡 Sim Radius"
+        tpBlink.Text = "⚡ Blinking..."
+        quantumBlink(savedCFrame)
+        tpBlink.Text = "✨ Quantum Blink"
     end
 end)
 
-local tpNetwork = createActionButton(stealerPage,"🔧 Network Owner",0.78)
-tpNetwork.MouseButton1Click:Connect(function()
+local tpVelocity = createActionButton(stealerPage,"🚀 Velocity Push",0.78)
+tpVelocity.MouseButton1Click:Connect(function()
     if savedCFrame then
-        tpNetwork.Text = "⏳ TPing..."
-        networkOwnerTP(savedCFrame)
-        tpNetwork.Text = "🔧 Network Owner"
+        tpVelocity.Text = "💨 Pushing..."
+        velocityPush(savedCFrame)
+        tpVelocity.Text = "🚀 Velocity Push"
     end
 end)
 
-local infoStealer = createLabel(stealerPage, "Tip: Try Lag Switch first!", 0.90)
+local infoStealer = createLabel(stealerPage, "Lag Save: invisible walk + TP!", 0.90)
 infoStealer.TextSize = 10
 infoStealer.TextColor3 = Color3.fromRGB(150,150,150)
 
