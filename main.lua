@@ -341,6 +341,208 @@ local infoLabel = createLabel(stealerPage, "Tip: Try Micro Step first!", 0.92)
 infoLabel.TextSize = 10
 infoLabel.TextColor3 = Color3.fromRGB(150,150,150)
 
+-- 🟥 MAIN PAGE - GODMODE
+local godmodeActive = false
+local originalHealth = 100
+local healthConnection = nil
+local forceFieldActive = false
+
+-- Method 1: Health Reset Loop
+local function healthGodMode(enabled)
+    if enabled then
+        local char = player.Character
+        if not char then return end
+        local humanoid = char:FindFirstChild("Humanoid")
+        if not humanoid then return end
+        
+        originalHealth = humanoid.MaxHealth
+        
+        -- Постійно відновлюємо здоров'я
+        healthConnection = RunService.Heartbeat:Connect(function()
+            if humanoid and humanoid.Health < humanoid.MaxHealth then
+                humanoid.Health = humanoid.MaxHealth
+            end
+        end)
+    else
+        if healthConnection then
+            healthConnection:Disconnect()
+            healthConnection = nil
+        end
+    end
+end
+
+-- Method 2: Remove Humanoid (не можна вбити те чого нема)
+local function removeHumanoidGod(enabled)
+    local char = player.Character
+    if not char then return end
+    
+    if enabled then
+        local humanoid = char:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.Name = "GodHumanoid"
+            local newHum = humanoid:Clone()
+            newHum.Name = "Humanoid"
+            newHum.Parent = char
+            humanoid:Destroy()
+        end
+    end
+end
+
+-- Method 3: ForceField spam
+local function forceFieldGod(enabled)
+    forceFieldActive = enabled
+    
+    if enabled then
+        task.spawn(function()
+            while forceFieldActive do
+                local char = player.Character
+                if char then
+                    if not char:FindFirstChildOfClass("ForceField") then
+                        local ff = Instance.new("ForceField")
+                        ff.Visible = false
+                        ff.Parent = char
+                    end
+                end
+                wait(0.5)
+            end
+            
+            -- Прибираємо ForceField коли вимкнено
+            local char = player.Character
+            if char then
+                for _, ff in pairs(char:GetChildren()) do
+                    if ff:IsA("ForceField") then
+                        ff:Destroy()
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- Method 4: Anchor всі частини (не можна кільнути закріплене)
+local anchorGodActive = false
+local function anchorGod(enabled)
+    anchorGodActive = enabled
+    local char = player.Character
+    if not char then return end
+    
+    if enabled then
+        task.spawn(function()
+            while anchorGodActive do
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                        part.Anchored = true
+                    end
+                end
+                wait(0.1)
+            end
+            
+            -- Розанкоримо коли вимкнено
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.Anchored = false
+                end
+            end
+        end)
+    end
+end
+
+-- Method 5: Respawn Protection (телепортує назад при смерті)
+local respawnPos = nil
+local respawnProtection = false
+
+local function respawnGod(enabled)
+    respawnProtection = enabled
+    
+    if enabled then
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            respawnPos = char.HumanoidRootPart.CFrame
+        end
+        
+        player.CharacterAdded:Connect(function(newChar)
+            if respawnProtection and respawnPos then
+                wait(0.5)
+                if newChar:FindFirstChild("HumanoidRootPart") then
+                    newChar.HumanoidRootPart.CFrame = respawnPos
+                end
+            end
+        end)
+    end
+end
+
+-- GUI для Main Page
+createLabel(mainPage, "GodMode Methods:", 0.02)
+
+local healthGodBtn = createActionButton(mainPage,"💚 Health Loop: OFF",0.09)
+healthGodBtn.MouseButton1Click:Connect(function()
+    godmodeActive = not godmodeActive
+    healthGodMode(godmodeActive)
+    
+    if godmodeActive then
+        healthGodBtn.Text = "💚 Health Loop: ON"
+        healthGodBtn.BackgroundColor3 = Color3.fromRGB(40,100,40)
+    else
+        healthGodBtn.Text = "💚 Health Loop: OFF"
+        healthGodBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    end
+end)
+
+local ffGodBtn = createActionButton(mainPage,"🛡️ ForceField: OFF",0.19)
+ffGodBtn.MouseButton1Click:Connect(function()
+    forceFieldActive = not forceFieldActive
+    forceFieldGod(forceFieldActive)
+    
+    if forceFieldActive then
+        ffGodBtn.Text = "🛡️ ForceField: ON"
+        ffGodBtn.BackgroundColor3 = Color3.fromRGB(40,100,40)
+    else
+        ffGodBtn.Text = "🛡️ ForceField: OFF"
+        ffGodBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    end
+end)
+
+local anchorGodBtn = createActionButton(mainPage,"🔒 Anchor God: OFF",0.29)
+anchorGodBtn.MouseButton1Click:Connect(function()
+    anchorGodActive = not anchorGodActive
+    anchorGod(anchorGodActive)
+    
+    if anchorGodActive then
+        anchorGodBtn.Text = "🔒 Anchor God: ON"
+        anchorGodBtn.BackgroundColor3 = Color3.fromRGB(40,100,40)
+    else
+        anchorGodBtn.Text = "🔒 Anchor God: OFF"
+        anchorGodBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    end
+end)
+
+local respawnGodBtn = createActionButton(mainPage,"♻️ Respawn Save: OFF",0.39)
+respawnGodBtn.MouseButton1Click:Connect(function()
+    respawnProtection = not respawnProtection
+    respawnGod(respawnProtection)
+    
+    if respawnProtection then
+        respawnGodBtn.Text = "♻️ Respawn Save: ON"
+        respawnGodBtn.BackgroundColor3 = Color3.fromRGB(40,100,40)
+    else
+        respawnGodBtn.Text = "♻️ Respawn Save: OFF"
+        respawnGodBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    end
+end)
+
+local removeHumBtn = createActionButton(mainPage,"⚠️ Remove Humanoid",0.49)
+removeHumBtn.BackgroundColor3 = Color3.fromRGB(100,50,30)
+removeHumBtn.MouseButton1Click:Connect(function()
+    removeHumanoidGod(true)
+    removeHumBtn.Text = "✔ Humanoid Removed"
+    wait(2)
+    removeHumBtn.Text = "⚠️ Remove Humanoid"
+end)
+
+local infoMain = createLabel(mainPage, "Tip: Use Health Loop + ForceField together!", 0.62)
+infoMain.TextSize = 10
+infoMain.TextColor3 = Color3.fromRGB(150,150,150)
+
 -- Visual placeholder
 local visualText = Instance.new("TextLabel", visualPage)
 visualText.Size = UDim2.fromScale(1,0.2)
