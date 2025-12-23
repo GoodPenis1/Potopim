@@ -273,31 +273,159 @@ local function offsetTP(targetCF)
     isTping = false
 end
 
--- Method 5: Part-based TP (створюємо невидиму платформу)
-local function platformTP(targetCF)
+-- Method 6: Rapid micro-bursts (швидкі мікро-стрибки)
+local function burstTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    local humanoid = char:FindFirstChild("Humanoid")
+    
+    -- Вимикаємо колізії
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+    
+    local distance = (targetCF.Position - hrp.Position).Magnitude
+    local jumpSize = 5 -- Стрибки по 5 studs
+    local jumps = math.ceil(distance / jumpSize)
+    
+    for i = 1, jumps do
+        if not char or not hrp then break end
+        
+        local progress = i / jumps
+        local newPos = hrp.Position:Lerp(targetCF.Position, progress)
+        hrp.CFrame = CFrame.new(newPos)
+        
+        -- Дуже коротка затримка (0.05 сек = під 2 секунди)
+        task.wait(0.05)
+    end
+    
+    -- Відновлюємо колізії
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = true
+        end
+    end
+end
+
+-- Method 7: Fake lag method (імітація лагу)
+local function fakeLagTP(targetCF)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
     local hrp = char.HumanoidRootPart
     
-    -- Створюємо невидиму частину
-    local platform = Instance.new("Part")
-    platform.Size = Vector3.new(5, 0.5, 5)
-    platform.Position = targetCF.Position - Vector3.new(0, 3, 0)
-    platform.Anchored = true
-    platform.Transparency = 1
-    platform.CanCollide = true
-    platform.Parent = workspace
+    -- Створюємо "лаг" - швидко рухаємось вперед-назад
+    local start = hrp.CFrame
+    local mid = start:Lerp(targetCF, 0.3)
     
-    wait(0.1)
+    for i = 1, 3 do
+        hrp.CFrame = mid
+        task.wait(0.05)
+        hrp.CFrame = start
+        task.wait(0.05)
+    end
     
-    -- Телепортуємо на платформу
-    hrp.CFrame = CFrame.new(platform.Position + Vector3.new(0, 3, 0))
+    -- Потім різко телепортуємось
+    hrp.CFrame = targetCF
+end
+
+-- Method 8: Network delay exploit (затримка синхронізації)
+local function networkTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
-    wait(0.2)
+    local hrp = char.HumanoidRootPart
     
-    -- Видаляємо платформу
-    platform:Destroy()
+    -- Спроба змінити Network Owner
+    pcall(function()
+        hrp:SetNetworkOwner(nil)
+    end)
+    
+    -- Вимикаємо всі скрипти тимчасово
+    for _, v in pairs(char:GetDescendants()) do
+        if v:IsA("Script") or v:IsA("LocalScript") then
+            v.Disabled = true
+        end
+    end
+    
+    task.wait(0.1)
+    
+    -- Миттєвий TP поки скрипти вимкнені
+    hrp.CFrame = targetCF
+    
+    task.wait(0.2)
+    
+    -- Вмикаємо скрипти назад
+    for _, v in pairs(char:GetDescendants()) do
+        if v:IsA("Script") or v:IsA("LocalScript") then
+            v.Disabled = false
+        end
+    end
+end
+
+-- Method 9: Clone swap method (підміна клона)
+local function cloneSwapTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    -- Створюємо клон персонажа
+    local clone = char:Clone()
+    clone.Parent = workspace
+    
+    -- Ставимо клон в стартову позицію
+    if clone:FindFirstChild("HumanoidRootPart") then
+        clone.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame
+    end
+    
+    task.wait(0.1)
+    
+    -- Телепортуємо оригінал
+    char.HumanoidRootPart.CFrame = targetCF
+    
+    task.wait(0.5)
+    
+    -- Видаляємо клон
+    clone:Destroy()
+end
+
+-- Method 10: Vehicle/Seat bypass (через сідання)
+local function seatTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    
+    -- Створюємо невидиме сидіння
+    local seat = Instance.new("Seat")
+    seat.Size = Vector3.new(1, 0.5, 1)
+    seat.Position = hrp.Position
+    seat.Anchored = true
+    seat.Transparency = 1
+    seat.CanCollide = false
+    seat.Parent = workspace
+    
+    -- Садимось
+    seat:Sit(char.Humanoid)
+    
+    task.wait(0.1)
+    
+    -- Рухаємо сидіння до цілі
+    local distance = (targetCF.Position - seat.Position).Magnitude
+    local steps = math.ceil(distance / 10)
+    
+    for i = 1, steps do
+        seat.CFrame = seat.CFrame:Lerp(targetCF, i/steps)
+        task.wait(0.05)
+    end
+    
+    -- Встаємо і видаляємо сидіння
+    char.Humanoid.Sit = false
+    task.wait(0.2)
+    seat:Destroy()
 end
 
 -- 🟥 STEALER GUI
@@ -316,42 +444,42 @@ saveBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-createLabel(stealerPage, "Stealth Methods:", 0.13)
+createLabel(stealerPage, "Fast Methods (<2 sec):", 0.13)
 
-local tpMicro = createActionButton(stealerPage,"🐌 Micro Step (safest)",0.20)
-tpMicro.MouseButton1Click:Connect(function()
+local tpBurst = createActionButton(stealerPage,"⚡ Burst Jump",0.20)
+tpBurst.MouseButton1Click:Connect(function()
     if savedCFrame then
-        microStepTP(savedCFrame)
+        burstTP(savedCFrame)
     end
 end)
 
-local tpWalk = createActionButton(stealerPage,"🚶 Walk To",0.30)
-tpWalk.MouseButton1Click:Connect(function()
+local tpFakeLag = createActionButton(stealerPage,"📶 Fake Lag",0.30)
+tpFakeLag.MouseButton1Click:Connect(function()
     if savedCFrame then
-        walkToTP(savedCFrame)
+        fakeLagTP(savedCFrame)
     end
 end)
 
-local tpOffset = createActionButton(stealerPage,"⚡ Offset Spam",0.40)
-tpOffset.MouseButton1Click:Connect(function()
+local tpNetwork = createActionButton(stealerPage,"🌐 Network Delay",0.40)
+tpNetwork.MouseButton1Click:Connect(function()
     if savedCFrame then
-        offsetTP(savedCFrame)
+        networkTP(savedCFrame)
     end
 end)
 
-createLabel(stealerPage, "Risky Methods:", 0.51)
+createLabel(stealerPage, "Experimental:", 0.51)
 
-local tpAnchor = createActionButton(stealerPage,"🔒 Anchor TP",0.58)
-tpAnchor.MouseButton1Click:Connect(function()
+local tpClone = createActionButton(stealerPage,"👥 Clone Swap",0.58)
+tpClone.MouseButton1Click:Connect(function()
     if savedCFrame then
-        anchorTP(savedCFrame)
+        cloneSwapTP(savedCFrame)
     end
 end)
 
-local tpPlatform = createActionButton(stealerPage,"📦 Platform TP",0.68)
-tpPlatform.MouseButton1Click:Connect(function()
+local tpSeat = createActionButton(stealerPage,"💺 Seat Vehicle",0.68)
+tpSeat.MouseButton1Click:Connect(function()
     if savedCFrame then
-        platformTP(savedCFrame)
+        seatTP(savedCFrame)
     end
 end)
 
