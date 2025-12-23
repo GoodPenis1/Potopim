@@ -1,4 +1,4 @@
--- Simple Cheat GUI with Tabs + Ping Bypass TP
+-- Simple Cheat GUI with Tabs + Network Bypass TP
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -9,15 +9,15 @@ gui.Name = "PotopimMenu"
 gui.ResetOnSpawn = false
 
 local mainFrame = Instance.new("Frame", gui)
-mainFrame.Size = UDim2.fromScale(0.45, 0.5)
-mainFrame.Position = UDim2.fromScale(0.275, 0.25)
+mainFrame.Size = UDim2.fromScale(0.45, 0.55)
+mainFrame.Position = UDim2.fromScale(0.275, 0.225)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 mainFrame.Active = true
 mainFrame.Draggable = true
 
 -- Title
 local title = Instance.new("TextLabel", mainFrame)
-title.Size = UDim2.new(1,0,0.1,0)
+title.Size = UDim2.new(1,0,0.09,0)
 title.Text = "Potopim Menu"
 title.TextColor3 = Color3.fromRGB(255,255,255)
 title.BackgroundColor3 = Color3.fromRGB(35,35,35)
@@ -26,13 +26,13 @@ title.TextSize = 20
 
 -- Tabs buttons
 local tabs = Instance.new("Frame", mainFrame)
-tabs.Position = UDim2.new(0,0,0.1,0)
-tabs.Size = UDim2.new(0.25,0,0.9,0)
+tabs.Position = UDim2.new(0,0,0.09,0)
+tabs.Size = UDim2.new(0.25,0,0.91,0)
 tabs.BackgroundColor3 = Color3.fromRGB(30,30,30)
 
 local function createTabButton(text, y)
     local btn = Instance.new("TextButton", tabs)
-    btn.Size = UDim2.new(1,0,0.1,0)
+    btn.Size = UDim2.new(1,0,0.09,0)
     btn.Position = UDim2.new(0,0,y,0)
     btn.Text = text
     btn.BackgroundColor3 = Color3.fromRGB(45,45,45)
@@ -43,13 +43,13 @@ local function createTabButton(text, y)
 end
 
 local mainBtn = createTabButton("Main",0)
-local stealerBtn = createTabButton("Stealer",0.12)
-local visualBtn = createTabButton("Visual",0.24)
+local stealerBtn = createTabButton("Stealer",0.11)
+local visualBtn = createTabButton("Visual",0.22)
 
 -- Pages
 local pages = Instance.new("Frame", mainFrame)
-pages.Position = UDim2.new(0.25,0,0.1,0)
-pages.Size = UDim2.new(0.75,0,0.9,0)
+pages.Position = UDim2.new(0.25,0,0.09,0)
+pages.Size = UDim2.new(0.75,0,0.91,0)
 pages.BackgroundTransparency = 1
 
 local function createPage()
@@ -80,336 +80,308 @@ visualBtn.MouseButton1Click:Connect(function() show(visualPage) end)
 -- Button creator
 local function createActionButton(parent,text,y)
     local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.fromScale(0.7,0.08)
+    b.Size = UDim2.fromScale(0.7,0.07)
     b.Position = UDim2.fromScale(0.15,y)
     b.Text = text
     b.BackgroundColor3 = Color3.fromRGB(60,60,60)
     b.TextColor3 = Color3.fromRGB(255,255,255)
     b.Font = Enum.Font.GothamBold
-    b.TextSize = 13
+    b.TextSize = 12
     return b
 end
 
 -- Label creator
 local function createLabel(parent, text, y)
     local l = Instance.new("TextLabel", parent)
-    l.Size = UDim2.fromScale(0.7, 0.06)
+    l.Size = UDim2.fromScale(0.7, 0.05)
     l.Position = UDim2.fromScale(0.15, y)
     l.Text = text
     l.TextColor3 = Color3.fromRGB(200,200,200)
     l.BackgroundTransparency = 1
     l.Font = Enum.Font.Gotham
-    l.TextSize = 12
+    l.TextSize = 11
     l.TextXAlignment = Enum.TextXAlignment.Left
     return l
 end
 
--- 🟥 PING & NETWORK BYPASS METHODS
+-- 🟥 NETWORK BYPASS METHODS
 local savedCFrame = nil
 
--- Method 1: Flying Platform TP (невидима платформа)
-local platformActive = false
-local platform = nil
-
-local function flyingPlatformTP(targetCF)
+-- Method 1: Packet Loss Simulation (імітація втрати пакетів)
+local function packetLossTP(targetCF)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
     local hrp = char.HumanoidRootPart
     
-    -- Створюємо невидиму платформу
-    platform = Instance.new("Part")
-    platform.Size = Vector3.new(6, 1, 6)
-    platform.Position = hrp.Position + Vector3.new(0, -3, 0)
-    platform.Anchored = true
-    platform.Transparency = 1
-    platform.CanCollide = true
-    platform.Name = "FlyPlatform"
-    platform.Parent = workspace
+    -- Створюємо штучну втрату пакетів
+    pcall(function()
+        settings().Network.IncomingReplicationLag = 500
+    end)
     
-    platformActive = true
-    
-    -- Піднімаємо вгору (50 studs)
-    local startHeight = platform.Position.Y
-    local targetHeight = startHeight + 50
-    
-    for i = 1, 25 do
-        if not platformActive then break end
-        local newY = startHeight + (50 * (i/25))
-        platform.Position = Vector3.new(platform.Position.X, newY, platform.Position.Z)
-        hrp.CFrame = CFrame.new(platform.Position + Vector3.new(0, 4, 0))
-        task.wait(0.05)
-    end
-    
-    task.wait(0.2)
-    
-    -- Летимо до цілі
-    local startPos = platform.Position
-    local targetPos = Vector3.new(targetCF.Position.X, targetHeight, targetCF.Position.Z)
-    
-    local distance = (targetPos - startPos).Magnitude
-    local steps = math.ceil(distance / 5)
-    
-    for i = 1, steps do
-        if not platformActive then break end
-        platform.Position = startPos:Lerp(targetPos, i/steps)
-        hrp.CFrame = CFrame.new(platform.Position + Vector3.new(0, 4, 0))
-        task.wait(0.05)
-    end
-    
-    task.wait(0.2)
-    
-    -- Опускаємось вниз
-    for i = 1, 25 do
-        if not platformActive then break end
-        local newY = targetHeight - (50 * (i/25))
-        platform.Position = Vector3.new(platform.Position.X, newY, platform.Position.Z)
-        hrp.CFrame = CFrame.new(platform.Position + Vector3.new(0, 4, 0))
-        task.wait(0.05)
-    end
-    
-    -- Фінальне позиціонування
-    hrp.CFrame = targetCF
-    
-    task.wait(2.5)
-    
-    -- Видаляємо платформу
-    if platform then
-        platform:Destroy()
-        platform = nil
-    end
-    platformActive = false
-end
-
--- Method 2: Lag Save & Invisible Walk (залагав на місці)
-local lagSaveActive = false
-local lagClone = nil
-local lagSavedPos = nil
-local invisConnection = nil
-
-local function startLagSave()
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    
-    lagSaveActive = true
-    lagSavedPos = char.HumanoidRootPart.CFrame
-    
-    -- Створюємо клон який "залагав"
-    lagClone = char:Clone()
-    
-    -- Робимо клон напівпрозорим
-    for _, part in pairs(lagClone:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 0.5
-            part.CanCollide = false
-        elseif part:IsA("Decal") or part:IsA("Texture") then
-            part.Transparency = 0.5
-        end
-    end
-    
-    -- Видаляємо скрипти з клона
-    for _, obj in pairs(lagClone:GetDescendants()) do
-        if obj:IsA("Script") or obj:IsA("LocalScript") then
-            obj:Destroy()
-        end
-    end
-    
-    lagClone.Parent = workspace
-    
-    if lagClone:FindFirstChild("HumanoidRootPart") then
-        lagClone.HumanoidRootPart.CFrame = lagSavedPos
-        lagClone.HumanoidRootPart.Anchored = true
-    end
-    
-    -- Робимо реального персонажа невидимим
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 1
-        elseif part:IsA("Decal") or part:IsA("Texture") then
-            part.Transparency = 1
-        end
-    end
-    
-    -- Тримаємо клон на місці
+    -- Спам позицій під час "втрати пакетів"
     task.spawn(function()
-        while lagSaveActive and lagClone do
-            if lagClone:FindFirstChild("HumanoidRootPart") then
-                lagClone.HumanoidRootPart.CFrame = lagSavedPos
-            end
-            task.wait(0.1)
+        for i = 1, 20 do
+            hrp.CFrame = hrp.CFrame * CFrame.new(math.random(-1,1), 0, math.random(-1,1))
+            task.wait(0.05)
         end
     end)
     
-    print("Lag Save активовано! Ходи крадь предмет.")
-end
-
-local function executeLagTP(targetCF)
-    if not lagSaveActive then return end
+    task.wait(0.5)
     
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    
-    -- "Розлагуємо" - телепортуємо реального персонажа
-    char.HumanoidRootPart.CFrame = targetCF or lagSavedPos
-    
-    task.wait(0.2)
-    
-    -- Робимо персонажа видимим
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 0
-        elseif part:IsA("Decal") or part:IsA("Texture") then
-            part.Transparency = 0
-        end
-    end
-    
-    -- Видаляємо клон
-    if lagClone then
-        lagClone:Destroy()
-        lagClone = nil
-    end
-    
-    lagSaveActive = false
+    -- Телепортуємось під час "лагу"
+    hrp.CFrame = targetCF
     
     task.wait(2.5)
     
-    print("Lag TP виконано!")
+    -- Відновлюємо з'єднання
+    pcall(function()
+        settings().Network.IncomingReplicationLag = 0
+    end)
 end
 
--- Method 3: Stealth Dash (швидкий dash невидимістю)
-local function stealthDash(targetCF)
+-- Method 2: Desync Attack (десинхронізація клієнт-сервер)
+local function desyncTP(targetCF)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
     local hrp = char.HumanoidRootPart
     
-    -- Робимо невидимим
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 1
-            part.CanCollide = false
+    -- Десинхронізуємо через багато CFrame змін за кадр
+    local realPos = hrp.CFrame
+    
+    task.spawn(function()
+        for i = 1, 50 do
+            hrp.CFrame = realPos * CFrame.new(math.random(-5,5), 0, math.random(-5,5))
+            RunService.Heartbeat:Wait()
         end
-    end
+    end)
     
-    -- Дуже швидкий dash (0.3 секунди)
-    local startPos = hrp.Position
-    local endPos = targetCF.Position
+    task.wait(0.3)
     
-    for i = 1, 15 do
-        local alpha = i / 15
-        hrp.CFrame = CFrame.new(startPos:Lerp(endPos, alpha))
-        task.wait(0.02)
-    end
-    
-    -- Чекаємо 2 секунди
-    task.wait(2)
-    
-    -- Робимо видимим
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 0
-            part.CanCollide = true
-        end
-    end
-end
-
--- Method 4: Fake Death TP (вдаємо смерть)
-local function fakeDeathTP(targetCF)
-    local char = player.Character
-    if not char then return end
-    
-    local humanoid = char:FindFirstChild("Humanoid")
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    
-    if not humanoid or not hrp then return end
-    
-    -- Робимо вигляд що помер
-    humanoid.Health = 0
-    
-    task.wait(0.5)
-    
-    -- Телепортуємо "мертве" тіло
+    -- Під час десинхронізації телепортуємось
     hrp.CFrame = targetCF
     
-    task.wait(0.5)
-    
-    -- "Оживаємо"
-    humanoid.Health = humanoid.MaxHealth
-    
-    task.wait(2)
-end
-
--- Method 5: Quantum Blink (телепорт маленькими "блінками")
-local function quantumBlink(targetCF)
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    
-    local hrp = char.HumanoidRootPart
-    
-    local startPos = hrp.Position
-    local endPos = targetCF.Position
-    local distance = (endPos - startPos).Magnitude
-    
-    -- Блінки по 10 studs
-    local blinkSize = 10
-    local blinks = math.ceil(distance / blinkSize)
-    
-    for i = 1, blinks do
-        -- Короткочасна невидимість під час блінку
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Transparency = 1
-            end
-        end
-        
-        task.wait(0.05)
-        
-        -- Блінк
-        local alpha = i / blinks
-        hrp.CFrame = CFrame.new(startPos:Lerp(endPos, alpha))
-        
-        -- З'являємось
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Transparency = 0
-            end
-        end
-        
-        task.wait(0.1)
-    end
-    
-    hrp.CFrame = targetCF
     task.wait(2.5)
 end
 
--- Method 6: Velocity Push (штовхає через velocity)
-local function velocityPush(targetCF)
+-- Method 3: Bandwidth Throttle (обмеження пропускної здатності)
+local function bandwidthTP(targetCF)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
     local hrp = char.HumanoidRootPart
     
-    -- Створюємо BodyVelocity
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bv.Parent = hrp
+    -- Імітуємо низьку пропускну здатність
+    pcall(function()
+        settings().Network.IncomingReplicationLag = 800
+        settings().Network.PhysicsSend = 1
+        settings().Network.ExperimentalPhysicsEnabled = false
+    end)
     
-    local direction = (targetCF.Position - hrp.Position).Unit
-    local distance = (targetCF.Position - hrp.Position).Magnitude
+    task.wait(0.7)
     
-    -- Розраховуємо velocity для досягнення за ~1 секунду
-    bv.Velocity = direction * (distance * 1.5)
+    hrp.CFrame = targetCF
     
-    task.wait(1)
+    task.wait(2.5)
     
-    -- Видаляємо velocity і позиціонуємо точно
-    bv:Destroy()
+    -- Відновлюємо
+    pcall(function()
+        settings().Network.IncomingReplicationLag = 0
+        settings().Network.PhysicsSend = 20
+        settings().Network.ExperimentalPhysicsEnabled = true
+    end)
+end
+
+-- Method 4: Jitter Exploit (нестабільний пінг)
+local function jitterTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    
+    -- Створюємо jitter (стрибки пінгу)
+    task.spawn(function()
+        for i = 1, 30 do
+            pcall(function()
+                settings().Network.IncomingReplicationLag = math.random(100, 900)
+            end)
+            task.wait(0.05)
+        end
+    end)
+    
+    task.wait(0.5)
+    
+    hrp.CFrame = targetCF
+    
+    task.wait(2.5)
+    
+    pcall(function()
+        settings().Network.IncomingReplicationLag = 0
+    end)
+end
+
+-- Method 5: Frame Skip TP (пропускаємо кадри)
+local function frameSkipTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    
+    -- Заморожуємо рендеринг
+    local oldFPS = tonumber(game:GetService("UserSettings").GameSettings.SavedQualityLevel)
+    
+    game:GetService("UserSettings").GameSettings.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
+    
+    -- Телепортуємось між "замороженими" кадрами
+    local steps = 0
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        steps = steps + 1
+        if steps % 5 == 0 then -- Кожен 5-й кадр
+            hrp.CFrame = hrp.CFrame:Lerp(targetCF, 0.2)
+        end
+        
+        if steps >= 50 then
+            hrp.CFrame = targetCF
+            connection:Disconnect()
+        end
+    end)
+    
+    task.wait(3)
+    
+    game:GetService("UserSettings").GameSettings.SavedQualityLevel = oldFPS or Enum.SavedQualitySetting.Automatic
+end
+
+-- Method 6: Replication Lag Bomb (бомба затримки реплікації)
+local function replicationBombTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    
+    -- Створюємо масу об'єктів для перевантаження реплікації
+    local parts = {}
+    for i = 1, 50 do
+        local p = Instance.new("Part")
+        p.Size = Vector3.new(0.1, 0.1, 0.1)
+        p.Position = hrp.Position + Vector3.new(math.random(-10,10), 5, math.random(-10,10))
+        p.Anchored = true
+        p.Transparency = 1
+        p.CanCollide = false
+        p.Parent = workspace
+        table.insert(parts, p)
+    end
+    
+    task.wait(0.3)
+    
+    -- Телепортуємось під час перевантаження
+    hrp.CFrame = targetCF
+    
+    task.wait(2.5)
+    
+    -- Очищуємо
+    for _, p in pairs(parts) do
+        p:Destroy()
+    end
+end
+
+-- Method 7: Ping Spoof (підробка пінгу)
+local function pingSpoofTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    
+    -- Спуфимо пінг через затримку отримання даних
+    pcall(function()
+        settings().Network.IncomingReplicationLag = 1500
+        settings().Network.RoundTripLatency = 1500
+    end)
+    
+    -- Рухаємося поки "пінг високий"
+    local startPos = hrp.Position
+    
+    for i = 1, 10 do
+        local alpha = i / 10
+        hrp.CFrame = CFrame.new(startPos:Lerp(targetCF.Position, alpha))
+        task.wait(0.15)
+    end
+    
     hrp.CFrame = targetCF
     
     task.wait(2)
+    
+    pcall(function()
+        settings().Network.IncomingReplicationLag = 0
+        settings().Network.RoundTripLatency = 0
+    end)
 end
 
--- 🟥 GODMODE METHODS
+-- Method 8: Server Stall (затримка обробки сервером)
+local function serverStallTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    
+    -- Створюємо велику кількість RemoteEvent спаму
+    task.spawn(function()
+        for i = 1, 100 do
+            for _, remote in pairs(game:GetDescendants()) do
+                if remote:IsA("RemoteEvent") then
+                    pcall(function()
+                        remote:FireServer("spam", i)
+                    end)
+                end
+            end
+            task.wait(0.01)
+        end
+    end)
+    
+    task.wait(0.5)
+    
+    hrp.CFrame = targetCF
+    
+    task.wait(2.5)
+end
+
+-- Method 9: Interpolation Abuse (зловживання інтерполяцією)
+local function interpolationTP(targetCF)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    
+    -- Відключаємо interpolation
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+        end
+    end
+    
+    -- Швидкі зміни позиції без інтерполяції
+    local startPos = hrp.Position
+    
+    for i = 1, 20 do
+        local alpha = i / 20
+        hrp.CFrame = CFrame.new(startPos:Lerp(targetCF.Position, alpha))
+        RunService.RenderStepped:Wait()
+    end
+    
+    hrp.CFrame = targetCF
+    
+    task.wait(2.5)
+    
+    -- Відновлюємо фізику
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CustomPhysicalProperties = nil
+        end
+    end
+end
+
+-- 🟥 GODMODE
 local godmodeActive = false
 local healthConnection = nil
 
@@ -433,10 +405,10 @@ local function healthGodMode(enabled)
     end
 end
 
--- 🟥 MAIN PAGE - GODMODE
+-- 🟥 MAIN PAGE
 createLabel(mainPage, "GodMode:", 0.02)
 
-local healthGodBtn = createActionButton(mainPage,"💚 Health Loop: OFF",0.09)
+local healthGodBtn = createActionButton(mainPage,"💚 Health Loop: OFF",0.08)
 healthGodBtn.MouseButton1Click:Connect(function()
     godmodeActive = not godmodeActive
     healthGodMode(godmodeActive)
@@ -450,7 +422,7 @@ healthGodBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-local infoMain = createLabel(mainPage, "Turn ON before stealing!", 0.25)
+local infoMain = createLabel(mainPage, "Turn ON before stealing!", 0.20)
 infoMain.TextSize = 11
 infoMain.TextColor3 = Color3.fromRGB(150,150,150)
 
@@ -468,71 +440,90 @@ saveBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-createLabel(stealerPage, "Creative Methods:", 0.13)
+createLabel(stealerPage, "Network Lag Methods:", 0.10)
 
-local tpPlatform = createActionButton(stealerPage,"🚁 Flying Platform",0.20)
-tpPlatform.MouseButton1Click:Connect(function()
+local tp1 = createActionButton(stealerPage,"📦 Packet Loss",0.16)
+tp1.MouseButton1Click:Connect(function()
     if savedCFrame then
-        tpPlatform.Text = "✈️ Flying..."
-        flyingPlatformTP(savedCFrame)
-        tpPlatform.Text = "🚁 Flying Platform"
+        tp1.Text = "⏳ TPing..."
+        packetLossTP(savedCFrame)
+        tp1.Text = "📦 Packet Loss"
     end
 end)
 
-local lagSaveBtn = createActionButton(stealerPage,"👻 Start Lag Save",0.30)
-lagSaveBtn.MouseButton1Click:Connect(function()
-    if lagSaveActive then
-        executeLagTP(savedCFrame)
-        lagSaveBtn.Text = "👻 Start Lag Save"
-        lagSaveBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-    else
-        startLagSave()
-        lagSaveBtn.Text = "⚡ Execute Lag TP"
-        lagSaveBtn.BackgroundColor3 = Color3.fromRGB(100,100,30)
-    end
-end)
-
-local tpDash = createActionButton(stealerPage,"⚡ Stealth Dash",0.40)
-tpDash.MouseButton1Click:Connect(function()
+local tp2 = createActionButton(stealerPage,"🔄 Desync Attack",0.25)
+tp2.MouseButton1Click:Connect(function()
     if savedCFrame then
-        tpDash.Text = "💨 Dashing..."
-        stealthDash(savedCFrame)
-        tpDash.Text = "⚡ Stealth Dash"
+        tp2.Text = "⏳ TPing..."
+        desyncTP(savedCFrame)
+        tp2.Text = "🔄 Desync Attack"
     end
 end)
 
-createLabel(stealerPage, "Other Methods:", 0.51)
-
-local tpDeath = createActionButton(stealerPage,"💀 Fake Death",0.58)
-tpDeath.MouseButton1Click:Connect(function()
+local tp3 = createActionButton(stealerPage,"📉 Bandwidth Throttle",0.34)
+tp3.MouseButton1Click:Connect(function()
     if savedCFrame then
-        tpDeath.Text = "☠️ Dying..."
-        fakeDeathTP(savedCFrame)
-        tpDeath.Text = "💀 Fake Death"
+        tp3.Text = "⏳ TPing..."
+        bandwidthTP(savedCFrame)
+        tp3.Text = "📉 Bandwidth Throttle"
     end
 end)
 
-local tpBlink = createActionButton(stealerPage,"✨ Quantum Blink",0.68)
-tpBlink.MouseButton1Click:Connect(function()
+local tp4 = createActionButton(stealerPage,"📊 Jitter Exploit",0.43)
+tp4.MouseButton1Click:Connect(function()
     if savedCFrame then
-        tpBlink.Text = "⚡ Blinking..."
-        quantumBlink(savedCFrame)
-        tpBlink.Text = "✨ Quantum Blink"
+        tp4.Text = "⏳ TPing..."
+        jitterTP(savedCFrame)
+        tp4.Text = "📊 Jitter Exploit"
     end
 end)
 
-local tpVelocity = createActionButton(stealerPage,"🚀 Velocity Push",0.78)
-tpVelocity.MouseButton1Click:Connect(function()
+createLabel(stealerPage, "Advanced Network:", 0.52)
+
+local tp5 = createActionButton(stealerPage,"🎬 Frame Skip",0.58)
+tp5.MouseButton1Click:Connect(function()
     if savedCFrame then
-        tpVelocity.Text = "💨 Pushing..."
-        velocityPush(savedCFrame)
-        tpVelocity.Text = "🚀 Velocity Push"
+        tp5.Text = "⏳ TPing..."
+        frameSkipTP(savedCFrame)
+        tp5.Text = "🎬 Frame Skip"
     end
 end)
 
-local infoStealer = createLabel(stealerPage, "Lag Save: invisible walk + TP!", 0.90)
-infoStealer.TextSize = 10
-infoStealer.TextColor3 = Color3.fromRGB(150,150,150)
+local tp6 = createActionButton(stealerPage,"💣 Replication Bomb",0.67)
+tp6.MouseButton1Click:Connect(function()
+    if savedCFrame then
+        tp6.Text = "⏳ TPing..."
+        replicationBombTP(savedCFrame)
+        tp6.Text = "💣 Replication Bomb"
+    end
+end)
+
+local tp7 = createActionButton(stealerPage,"🎭 Ping Spoof",0.76)
+tp7.MouseButton1Click:Connect(function()
+    if savedCFrame then
+        tp7.Text = "⏳ TPing..."
+        pingSpoofTP(savedCFrame)
+        tp7.Text = "🎭 Ping Spoof"
+    end
+end)
+
+local tp8 = createActionButton(stealerPage,"⏸️ Server Stall",0.85)
+tp8.MouseButton1Click:Connect(function()
+    if savedCFrame then
+        tp8.Text = "⏳ TPing..."
+        serverStallTP(savedCFrame)
+        tp8.Text = "⏸️ Server Stall"
+    end
+end)
+
+local tp9 = createActionButton(stealerPage,"🌀 Interpolation",0.94)
+tp9.MouseButton1Click:Connect(function()
+    if savedCFrame then
+        tp9.Text = "⏳ TPing..."
+        interpolationTP(savedCFrame)
+        tp9.Text = "🌀 Interpolation"
+    end
+end)
 
 -- Visual placeholder
 local visualText = Instance.new("TextLabel", visualPage)
